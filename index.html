@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Ubreathe</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -20,13 +21,15 @@
   *{ box-sizing:border-box; }
   html,body{
     margin:0 auto;
-    width: 340px;
+    width:100%;
+    max-width:340px;
+    min-width:0;
     background: var(--bg);
     color: var(--text);
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing:antialiased;
   }
-  .wrap{ padding: 22px 22px 18px; text-align:center; position:relative; }
+  .wrap{ padding: 22px 22px 18px; text-align:center; position:relative; width:100%; }
   h1{
     font-family:'Space Grotesk', sans-serif;
     font-weight:700;
@@ -65,8 +68,9 @@
 
   .stage{
     position:relative;
-    width: 220px;
-    height: 220px;
+    width: min(220px, 100%);
+    height: auto;
+    aspect-ratio: 1 / 1;
     margin: 0 auto 10px;
     user-select:none;
     -webkit-user-select:none;
@@ -80,6 +84,7 @@
     box-shadow: 4px 4px 0 rgba(255,46,149,0.35);
   }
   svg{ display:block; overflow:visible; }
+  #svgRoot{ width:100%; height:100%; }
   .guide{ fill:none; stroke: var(--line-idle); stroke-width: 2; stroke-dasharray: 3 5; }
   .path{
     fill:none;
@@ -213,6 +218,8 @@
 
   .footer{
     display:flex; justify-content:space-between; align-items:center;
+    gap: 6px;
+    flex-wrap: wrap;
     margin-top: 8px;
     font-size: 11.5px;
     color: var(--subtext);
@@ -407,6 +414,22 @@
     transition: transform 0.12s ease, box-shadow 0.12s ease;
   }
   .tutorialNext:hover{ transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--text); }
+
+  @media (max-width: 360px){
+    .wrap{ padding-left:16px; padding-right:16px; }
+    .modeToggle{ max-width:100%; }
+    .modeBtn{ padding-left:11px; padding-right:11px; }
+    .durlabel{ min-width:0; }
+    .optimalInfo{ font-size:10px; }
+    .footer{ justify-content:center; }
+  }
+
+  @media (max-width: 300px){
+    .wrap{ padding-left:12px; padding-right:12px; }
+    .stage{ width:100%; }
+    .modeBtn{ padding-left:9px; padding-right:9px; font-size:11.5px; }
+    .soundToggle{ font-size:10px; }
+  }
 </style>
 </head>
 <body>
