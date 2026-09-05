@@ -237,6 +237,9 @@
   .reset:hover{ color: var(--inhale); }
 
   .modalOverlay{
+    touch-action:auto;
+    -webkit-user-select:none;
+    user-select:none;
     position:absolute;
     inset:0;
     background: rgba(35,39,158,0.18);
@@ -299,6 +302,8 @@
     margin-bottom: 14px;
   }
   .modalClose{
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     border: 2px solid var(--text);
     background: var(--inhale);
     color: var(--surface);
@@ -677,6 +682,7 @@
   }
 
   soundToggle.addEventListener('click', () => {
+    unlockAudio();
     soundEnabled = !soundEnabled;
     updateSoundToggle();
     if (soundEnabled) {
@@ -1035,7 +1041,25 @@
     modalOpen = false;
     failOverlay.classList.remove('open');
   }
-  failClose.addEventListener('click', closeFail);
+
+  function restartAfterFail(e){
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    closeFail();
+    resetAll();
+  }
+
+  function startNextShape(e){
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    closeSummary();
+  }
+
+  failClose.addEventListener('click', restartAfterFail);
+  failClose.addEventListener('touchend', restartAfterFail, { passive:false });
+  modalClose.addEventListener('click', startNextShape);
+  modalClose.addEventListener('touchend', startNextShape, { passive:false });
+
+  failOverlay.addEventListener('touchstart', (e) => e.stopPropagation(), { passive:true });
+  modalOverlay.addEventListener('touchstart', (e) => e.stopPropagation(), { passive:true });
 
   stage.addEventListener('mousedown', press);
   window.addEventListener('mouseup', release);
