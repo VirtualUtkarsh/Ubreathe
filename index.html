@@ -649,22 +649,34 @@
 
     const play = () => {
       const now = ctx.currentTime;
+
+      // Two stacked oscillators (root + a soft fifth) make the chime read as
+      // louder and fuller without just cranking one tone into distortion.
       const osc = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      // Higher pitch for inhale, lower pitch for exhale.
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(inhale ? 660 : 440, now);
+      osc2.type = 'sine';
+      const baseFreq = inhale ? 660 : 440;
+      osc.frequency.setValueAtTime(baseFreq, now);
       osc.frequency.exponentialRampToValueAtTime(inhale ? 720 : 480, now + 0.16);
+      osc2.frequency.setValueAtTime(baseFreq * 1.5, now); // perfect fifth above
+      osc2.frequency.exponentialRampToValueAtTime((inhale ? 720 : 480) * 1.5, now + 0.16);
 
+      // Peak gain raised from 0.07 to 0.32 — noticeably louder, still short
+      // envelope with a fast attack/decay so it stays a "chime" and not a tone.
       gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.07, now + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+      gain.gain.exponentialRampToValueAtTime(0.32, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.32);
 
       osc.connect(gain);
+      osc2.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.3);
+      osc2.start(now);
+      osc.stop(now + 0.34);
+      osc2.stop(now + 0.34);
     };
 
     if (ctx.state === 'suspended') {
@@ -1031,7 +1043,6 @@
     breathTimes = [];
     updateHistory();
   }
-  modalClose.addEventListener('click', closeSummary);
 
   function showFail(){
     modalOpen = true;
@@ -1042,50 +1053,34 @@
     failOverlay.classList.remove('open');
   }
 
-  function restartAfterFail(e){
-    if (e) { e.preventDefault(); e.stopPropagation(); }
+  // Both modal buttons only need a plain 'click' listener. Pointer Events
+  // (used below for the drawing surface) plus touch-action:manipulation on
+  // these buttons means the browser fires 'click' promptly and reliably on
+  // mobile — no manual touchstart/touchend/preventDefault juggling needed,
+  // which is what was causing the unreliable taps.
+  failClose.addEventListener('click', () => {
     closeFail();
     resetAll();
-  }
-
-  function startNextShape(e){
-    if (e) { e.preventDefault(); e.stopPropagation(); }
+  });
+  modalClose.addEventListener('click', () => {
     closeSummary();
-  }
+  });
 
-  failClose.addEventListener('click', restartAfterFail);
-  failClose.addEventListener('touchend', restartAfterFail, { passive:false });
-  modalClose.addEventListener('click', startNextShape);
-  modalClose.addEventListener('touchend', startNextShape, { passive:false });
-
-  failOverlay.addEventListener('touchstart', (e) => e.stopPropagation(), { passive:true });
-  modalOverlay.addEventListener('touchstart', (e) => e.stopPropagation(), { passive:true });
-
-  stage.addEventListener('mousedown', press);
-  window.addEventListener('mouseup', release);
-
-  // Do not intercept touches on modal buttons. On mobile, preventing the
-  // default touch action here would stop the browser from generating their
-  // click event, making Try again / Start next shape appear unresponsive.
-  stage.addEventListener('touchstart', (e) => {
-    if (e.target.closest('button')) return;
+  // ---- input: Pointer Events unify mouse + touch + pen into one model,
+  // avoiding the double-firing / ghost-click issues that come from mixing
+  // separate mouse and touch listeners. ----
+  stage.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button')) return; // let modal buttons behave normally
     e.preventDefault();
     unlockAudio();
     press();
-  }, { passive:false });
-  window.addEventListener('touchend', release);
-  window.addEventListener('touchcancel', release);
-
-  window.addEventListener('mousemove', (e) => {
+  });
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+  window.addEventListener('pointermove', (e) => {
     cursorClientX = e.clientX;
     cursorClientY = e.clientY;
   });
-  window.addEventListener('touchmove', (e) => {
-    if (e.touches && e.touches[0]){
-      cursorClientX = e.touches[0].clientX;
-      cursorClientY = e.touches[0].clientY;
-    }
-  }, { passive: true });
 
   window.addEventListener('keydown', (e) => {
     if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar'){
