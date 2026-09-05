@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ubreathe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #f3efdf;       /* warm riso paper */
+    --surface: #fffcf3;  /* card white, slightly warm */
+    --line-idle: #b7baf0; /* pale federal-blue for idle guides/borders */
+    --text: #23279e;     /* federal blue */
+    --subtext: #7477b8;  /* muted federal blue */
+    --inhale: #ff2e95;   /* fluorescent pink */
+    --exhale: #23279e;   /* federal blue */
+    --hold: #9a9dcf;
+    --bonus: #b8790f;    /* warm amber, readable on cream */
+  }
+  *{ box-sizing:border-box; }
+  html,body{
+    margin:0 auto;
+    width: 340px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{ padding: 22px 22px 18px; text-align:center; position:relative; }
+  h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: 19px;
+    margin: 0 0 3px;
+    color: var(--text);
+    text-shadow: 2px 2px 0 rgba(255,46,149,0.45);
+  }
+  p.sub{ margin: 0 0 16px; color: var(--subtext); font-size: 12.5px; }
+
+  .modeToggle{
+    display:flex;
+    justify-content:center;
+    gap: 4px;
+    margin-bottom: 16px;
+    background: var(--surface);
+    border: 2px solid var(--text);
+    box-shadow: 3px 3px 0 var(--line-idle);
+    border-radius: 22px;
+    padding: 3px;
+    width: fit-content;
+    margin-left:auto; margin-right:auto;
+  }
+  .modeBtn{
+    border:none;
+    background:none;
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 16px;
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+  }
+  .modeBtn.active{ background: var(--text); color: var(--surface); }
+
+  .stage{
+    position:relative;
+    width: 220px;
+    height: 220px;
+    margin: 0 auto 10px;
+    user-select:none;
+    -webkit-user-select:none;
+    touch-action:none;
+    cursor:pointer;
+    background-color: var(--surface);
+    background-image: radial-gradient(var(--line-idle) 1.2px, transparent 1.2px);
+    background-size: 11px 11px;
+    border: 2px solid var(--text);
+    border-radius: 14px;
+    box-shadow: 4px 4px 0 rgba(255,46,149,0.35);
+  }
+  svg{ display:block; overflow:visible; }
+  .guide{ fill:none; stroke: var(--line-idle); stroke-width: 2; stroke-dasharray: 3 5; }
+  .path{
+    fill:none;
+    stroke-width: 4;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+    transition: stroke 0.35s ease;
+  }
+  .dot{ r: 5.5; transition: fill 0.35s ease; }
+  .center{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .phase{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: 23px;
+    margin-bottom: 5px;
+    transition: color 0.35s ease;
+  }
+  .timer{ font-size: 12.5px; color: var(--subtext); font-variant-numeric: tabular-nums; }
+  .bonus{
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--bonus);
+    font-variant-numeric: tabular-nums;
+    min-height: 15px;
+    margin-top: 2px;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  .bonus.show{ opacity:1; transform: translateY(0); }
+
+  .historyWrap{
+    margin: 0 auto 14px;
+    max-width: 260px;
+  }
+  .historyLabel{
+    font-size: 10.5px;
+    color: var(--subtext);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+  .historyList{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content:center;
+    min-height: 22px;
+  }
+  .chip{
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    background: var(--surface);
+    border: 1.5px solid var(--text);
+    border-radius: 12px;
+    padding: 3px 9px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+  .chip.inhale{ border-color: var(--inhale); color: var(--inhale); }
+  .chip.exhale{ border-color: var(--exhale); color: var(--exhale); }
+
+  .instruction{
+    min-height: 36px;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+  .instruction .key{ color: var(--subtext); font-size: 11.5px; display:block; margin-top: 2px; }
+
+  .row{ display:flex; align-items:center; justify-content:center; gap: 14px; margin-bottom: 10px; }
+
+  .optimalInfo{
+    margin: -2px 0 12px;
+    padding: 8px 10px;
+    max-width: 100%;
+    text-align:left;
+    background: var(--surface);
+    border: 1.5px solid var(--line-idle);
+    border-left: 3px solid var(--inhale);
+    border-radius: 8px;
+    box-shadow: 2px 2px 0 var(--line-idle);
+    color: var(--subtext);
+    font-size: 10.5px;
+    line-height: 1.4;
+  }
+  .optimalInfo .whyTitle{
+    display:block;
+    margin-bottom:2px;
+    color:var(--text);
+    font-family:'Space Grotesk', sans-serif;
+    font-size:11.5px;
+    font-weight:700;
+  }
+
+  .soundToggle{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    border:1.5px solid var(--line-idle);
+    background:var(--surface);
+    color:var(--subtext);
+    border-radius:14px;
+    padding:4px 8px;
+    font-size:10.5px;
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+  }
+  .soundToggle:hover{ border-color:var(--text); color:var(--text); }
+  .soundToggle.muted{ opacity:.7; }
+  .soundIcon{ font-size:12px; line-height:1; }
+  .durbtn{
+    width: 26px; height:26px; border-radius:50%;
+    border: 2px solid var(--text);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 14px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    line-height:1;
+    box-shadow: 2px 2px 0 var(--line-idle);
+  }
+  .durbtn:hover{ border-color: var(--inhale); }
+  .durlabel{ font-size: 12px; color: var(--subtext); min-width: 130px; }
+
+  .footer{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top: 8px;
+    font-size: 11.5px;
+    color: var(--subtext);
+  }
+  .reset{
+    background:none; border:none;
+    color: var(--text);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor:pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    padding: 4px;
+  }
+  .reset:hover{ color: var(--inhale); }
+
+  .modalOverlay{
+    position:absolute;
+    inset:0;
+    background: rgba(35,39,158,0.18);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.25s ease;
+    z-index: 10;
+    border-radius: inherit;
+    backdrop-filter: blur(1px);
+  }
+  .modalOverlay.open{ opacity:1; pointer-events:auto; }
+  .modalCard{
+    background: var(--surface);
+    border: 2px solid var(--text);
+    box-shadow: 5px 5px 0 var(--inhale);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    width: 260px;
+    max-height: 380px;
+    overflow-y: auto;
+    text-align:center;
+  }
+  .modalTitle{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: 17px;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .modalSvgWrap{
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 12px;
+  }
+  .modalTimes{
+    display:flex;
+    flex-direction:column;
+    gap: 5px;
+    margin-bottom: 14px;
+    text-align:left;
+  }
+  .modalTimeRow{
+    display:flex;
+    justify-content:space-between;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--bg);
+  }
+  .modalTimeRow .lbl{ color: var(--subtext); }
+  .modalTimeRow .val{ font-variant-numeric: tabular-nums; }
+  .modalTimeRow.inhale .val{ color: var(--inhale); }
+  .modalTimeRow.exhale .val{ color: var(--exhale); }
+  .modalTotal{
+    font-size: 12px;
+    color: var(--subtext);
+    margin-bottom: 14px;
+  }
+  .modalClose{
+    border: 2px solid var(--text);
+    background: var(--inhale);
+    color: var(--surface);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 9px 18px;
+    border-radius: 20px;
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+    box-shadow: 3px 3px 0 var(--text);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .modalClose:hover{ transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--text); }
+
+  .helpBtn{
+    position:absolute;
+    top: 18px;
+    right: 18px;
+    width: 24px; height:24px;
+    border-radius:50%;
+    border: 2px solid var(--text);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 700;
+    font-family:'Inter', sans-serif;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    line-height:1;
+  }
+  .helpBtn:hover{ background: var(--inhale); color: var(--surface); border-color: var(--inhale); }
+
+  .tutorialOverlay{
+    position:absolute;
+    inset:0;
+    background: rgba(35,39,158,0.32);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    opacity:0;
+    pointer-events:none;
+    transition: opacity 0.25s ease;
+    z-index: 30;
+    border-radius: inherit;
+    padding: 22px;
+  }
+  .tutorialOverlay.open{ opacity:1; pointer-events:auto; }
+  .tutorialCard{
+    background: var(--surface);
+    border: 2px solid var(--text);
+    box-shadow: 5px 5px 0 var(--inhale);
+    border-radius: 14px;
+    padding: 22px 20px 18px;
+    width: 100%;
+    max-width: 280px;
+    text-align:center;
+    position:relative;
+  }
+  .tutorialSkip{
+    position:absolute;
+    top: 12px; right: 14px;
+    background:none; border:none;
+    color: var(--subtext);
+    font-size: 11.5px;
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+  }
+  .tutorialSkip:hover{ color: var(--text); }
+  .tutorialIcon{
+    width: 64px; height:64px;
+    margin: 4px auto 14px;
+    color: var(--text);
+  }
+  .tutorialIcon svg{ width:100%; height:100%; display:block; }
+  .tutorialTitle{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size: 17px;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .tutorialText{
+    font-size: 12.5px;
+    color: var(--subtext);
+    line-height: 1.5;
+    margin-bottom: 16px;
+    min-height: 54px;
+  }
+  .tutorialDots{
+    display:flex;
+    justify-content:center;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .tutorialDot{
+    width: 6px; height:6px;
+    border-radius: 50%;
+    background: var(--line-idle);
+    transition: background 0.2s ease;
+  }
+  .tutorialDot.active{ background: var(--inhale); }
+  .tutorialNext{
+    border: 2px solid var(--text);
+    background: var(--inhale);
+    color: var(--surface);
+    font-weight: 700;
+    font-size: 13px;
+    padding: 9px 22px;
+    border-radius: 20px;
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+    box-shadow: 3px 3px 0 var(--text);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .tutorialNext:hover{ transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--text); }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <button class="helpBtn" id="helpBtn" title="How to use">?</button>
+  <h1>Ubreathe</h1>
+  <p class="sub">Press and hold — mouse or spacebar — to breathe in or out. Release to end that breath.</p>
+
+  <div class="modeToggle">
+    <button class="modeBtn active" id="modeOptimal">Optimal</button>
+    <button class="modeBtn" id="modeFree">Free</button>
+    <button class="modeBtn" id="modeSnake">Snake</button>
+  </div>
+
+  <div class="stage" id="stage">
+    <svg id="svgRoot" viewBox="0 0 220 220" width="220" height="220">
+      <polygon class="guide" id="guidePoly" points=""></polygon>
+      <g id="committedGroup"></g>
+      <path id="drawnPath" class="path" d=""></path>
+      <circle id="dot" class="dot" cx="0" cy="0"></circle>
+    </svg>
+    <div class="center">
+      <div class="phase" id="phaseLabel">Hold</div>
+      <div class="timer" id="timerLabel">0.0s</div>
+      <div class="bonus" id="bonusLabel"></div>
+    </div>
+
+    <div class="modalOverlay" id="modalOverlay">
+      <div class="modalCard">
+        <div class="modalTitle">Shape complete</div>
+        <div class="modalSvgWrap">
+          <svg id="modalSvg" viewBox="0 0 220 220" width="140" height="140">
+            <g id="modalSegments"></g>
+          </svg>
+        </div>
+        <div class="modalTimes" id="modalTimes"></div>
+        <div class="modalTotal" id="modalTotal"></div>
+        <button class="modalClose" id="modalClose">Start next shape</button>
+      </div>
+    </div>
+
+    <div class="modalOverlay" id="failOverlay">
+      <div class="modalCard">
+        <div class="modalTitle">Hold a little longer</div>
+        <div style="font-size:12.5px; color:var(--subtext); line-height:1.5; margin-bottom:14px;">
+          For optimal square breathing, you must hold each breath for 4 seconds. Try again from the start of the shape.
+        </div>
+        <button class="modalClose" id="failClose">Try again</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="historyWrap">
+    <div class="historyLabel">This shape's breaths</div>
+    <div class="historyList" id="historyList"></div>
+  </div>
+
+  <div class="instruction" id="instruction">
+    Press and hold anywhere on the shape
+    <span class="key">release ends that breath</span>
+  </div>
+
+  <div class="row" id="segmentRow" style="display:none;">
+    <button class="durbtn" id="segDown">–</button>
+    <div class="durlabel" id="segLabel">6 breaths · hexagon</div>
+    <button class="durbtn" id="segUp">+</button>
+  </div>
+
+  <div class="row" id="optimalRow">
+    <div class="durlabel">Square · 4s inhale · 4s exhale</div>
+  </div>
+
+  <div class="optimalInfo" id="optimalInfo">
+    <span class="whyTitle">Why box breathing?</span>
+    A steady 4-4-4-4 rhythm can help slow the breath and reduce stress. It is also commonly associated with Navy SEAL breathing practice.
+  </div>
+
+  <div class="footer">
+    <button class="soundToggle" id="soundToggle" type="button" aria-pressed="false" title="Mute breathing chimes">
+      <span class="soundIcon" id="soundIcon">🔊</span>
+      <span id="soundText">Sound on</span>
+    </button>
+    <span id="cycles">Cycles: 0</span>
+    <span id="xpLabel">XP: 0</span>
+    <button class="reset" id="resetBtn">Reset</button>
+  </div>
+
+  <div class="tutorialOverlay" id="tutorialOverlay">
+    <div class="tutorialCard">
+      <button class="tutorialSkip" id="tutorialSkip">Skip</button>
+      <div class="tutorialIcon" id="tutorialIcon"></div>
+      <div class="tutorialTitle" id="tutorialTitle"></div>
+      <div class="tutorialText" id="tutorialText"></div>
+      <div class="tutorialDots" id="tutorialDots"></div>
+      <button class="tutorialNext" id="tutorialNext">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const CX = 110, CY = 110, R = 95;
+  const FREE_SPEED = 220 / 4000; // px per ms in Free mode
+
+  const polyNames = {3:'triangle',4:'square',5:'pentagon',6:'hexagon',7:'heptagon',8:'octagon',9:'nonagon',10:'decagon',11:'11-gon',12:'12-gon'};
+
+  // ---- config ----
+  let mode = 'optimal';    // 'optimal' | 'free' | 'snake'
+  let numBreaths = 4;      // breaths (sides) per full shape — locked to 4 (square) in Optimal mode
+  const OPTIMAL_DURATION = 4000; // ms, fixed 4s inhale / 4s exhale in Optimal mode
+  let duration = OPTIMAL_DURATION;
+
+  // ---- snake-mode steering (arrow keys / A-D curve the direction while held) ----
+  const SNAKE_TURN_SPEED = 0.12; // degrees per ms
+  let leftPressed = false;
+  let rightPressed = false;
+
+  function startPoint(){
+    return { x: CX, y: CY - R };
+  }
+  function startHeading(n){
+    return 180 / n;
+  }
+  let points = [startPoint()];
+  let headingDeg = startHeading(numBreaths);
+  let segCount = 0;
+  let currentLength = 0;
+  let isInhale = true;
+  let isHeld = false;
+  let roundComplete = false;
+  let pressTs = null;
+  let modalOpen = false;
+
+  let breathTimes = [];
+
+  let sideLen = 0;
+
+  const drawnPath = document.getElementById('drawnPath');
+  const committedGroup = document.getElementById('committedGroup');
+  const guidePoly = document.getElementById('guidePoly');
+  const dot = document.getElementById('dot');
+  const phaseLabel = document.getElementById('phaseLabel');
+  const timerLabel = document.getElementById('timerLabel');
+  const instruction = document.getElementById('instruction');
+  const cyclesLabel = document.getElementById('cycles');
+  const segLabel = document.getElementById('segLabel');
+  const segmentRow = document.getElementById('segmentRow');
+  const optimalRow = document.getElementById('optimalRow');
+  const stage = document.getElementById('stage');
+  const svgRoot = document.getElementById('svgRoot');
+  const modeOptimalBtn = document.getElementById('modeOptimal');
+  const modeFreeBtn = document.getElementById('modeFree');
+  const modeSnakeBtn = document.getElementById('modeSnake');
+  const historyList = document.getElementById('historyList');
+  const modalOverlay = document.getElementById('modalOverlay');
+  const modalSegments = document.getElementById('modalSegments');
+  const modalTimes = document.getElementById('modalTimes');
+  const modalTotal = document.getElementById('modalTotal');
+  const modalClose = document.getElementById('modalClose');
+  const failOverlay = document.getElementById('failOverlay');
+  const failClose = document.getElementById('failClose');
+  let cycles = 0;
+  let totalXP = 0;
+  let pendingBonus = 0;
+  const xpLabel = document.getElementById('xpLabel');
+  const bonusLabel = document.getElementById('bonusLabel');
+  const soundToggle = document.getElementById('soundToggle');
+  const soundIcon = document.getElementById('soundIcon');
+  const soundText = document.getElementById('soundText');
+  const optimalInfo = document.getElementById('optimalInfo');
+
+  // Soft two-tone breathing cues. Audio is created only after a user gesture,
+  // so it works cleanly with browser autoplay restrictions.
+  let soundEnabled = true;
+  let audioCtx = null;
+
+  function ensureAudio(){
+    if (!soundEnabled) return null;
+    try {
+      if (!audioCtx){
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return null;
+        audioCtx = new AudioContext();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function playBreathChime(inhale){
+    if (!soundEnabled) return;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    // Higher pitch for inhale, lower pitch for exhale.
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(inhale ? 660 : 440, now);
+    osc.frequency.exponentialRampToValueAtTime(inhale ? 720 : 480, now + 0.16);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.045, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
+
+  function updateSoundToggle(){
+    soundToggle.classList.toggle('muted', !soundEnabled);
+    soundToggle.setAttribute('aria-pressed', String(!soundEnabled));
+    soundIcon.textContent = soundEnabled ? '🔊' : '🔇';
+    soundText.textContent = soundEnabled ? 'Sound on' : 'Muted';
+  }
+
+  soundToggle.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    updateSoundToggle();
+    if (soundEnabled) playBreathChime(true);
+  });
+
+  function generateVertices(n){
+    const v = [];
+    for (let k = 0; k < n; k++){
+      const angle = -Math.PI/2 + k * (2*Math.PI/n);
+      v.push({ x: CX + R*Math.cos(angle), y: CY + R*Math.sin(angle) });
+    }
+    return v;
+  }
+
+  function rebuildGeometry(){
+    sideLen = 2 * R * Math.sin(Math.PI / numBreaths);
+    const guideVerts = generateVertices(numBreaths);
+    guidePoly.setAttribute('points', guideVerts.map(p => `${p.x},${p.y}`).join(' '));
+    if (mode === 'snake'){
+      segLabel.textContent = numBreaths + ' breaths · steer freely';
+    } else {
+      segLabel.textContent = numBreaths + ' breaths · ' + (polyNames[numBreaths] || numBreaths + '-gon');
+    }
+  }
+
+  function maxLenForMode(){
+    if (mode !== 'snake' && segCount === numBreaths - 1){
+      // Final breath of the shape — cap growth exactly at the distance back
+      // to the starting point, so it can't overshoot past closure.
+      const last = points[points.length - 1];
+      return Math.hypot(points[0].x - last.x, points[0].y - last.y);
+    }
+    return mode === 'optimal' ? sideLen : Infinity;
+  }
+  function growthRateForMode(){
+    return mode === 'optimal' ? (sideLen / duration) : FREE_SPEED;
+  }
+
+  let cursorClientX = null;
+  let cursorClientY = null;
+  function screenToSvg(clientX, clientY){
+    const pt = svgRoot.createSVGPoint();
+    pt.x = clientX; pt.y = clientY;
+    const ctm = svgRoot.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const sp = pt.matrixTransform(ctm.inverse());
+    return { x: sp.x, y: sp.y };
+  }
+  function angleDiff(a, b){
+    let d = (b - a) % 360;
+    if (d > 180) d -= 360;
+    if (d < -180) d += 360;
+    return d;
+  }
+
+  let snakeTrail = [];
+  let segmentRanges = [];
+
+  function renderCommittedSegments(){
+    committedGroup.innerHTML = '';
+    for (const seg of segmentRanges){
+      const pts = points.slice(seg.startIdx, seg.endIdx + 1);
+      if (pts.length < 2) continue;
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('class', 'path');
+      p.setAttribute('d', pathDataFor(pts, mode === 'snake'));
+      p.style.stroke = seg.phase === 'Inhale' ? 'var(--inhale)' : 'var(--exhale)';
+      committedGroup.appendChild(p);
+    }
+  }
+
+  function livePoint(){
+    const last = points[points.length - 1];
+    const rad = headingDeg * Math.PI / 180;
+    return {
+      x: last.x + Math.cos(rad) * currentLength,
+      y: last.y + Math.sin(rad) * currentLength,
+    };
+  }
+
+  function fitViewBoxToPoints(pts){
+    if (mode === 'optimal'){
+      svgRoot.setAttribute('viewBox', '0 0 220 220');
+      return;
+    }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of pts){
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+    }
+    const pad = 24;
+    const w = maxX - minX, h = maxY - minY;
+    const size = Math.max(w, h, 220 - pad * 2) + pad * 2;
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    svgRoot.setAttribute('viewBox', `${cx - size/2} ${cy - size/2} ${size} ${size}`);
+  }
+
+  function pathDataFor(pts, smooth){
+    if (pts.length === 0) return '';
+    if (!smooth || pts.length < 3){
+      return pts.map((pt, i) => (i === 0 ? `M ${pt.x} ${pt.y}` : `L ${pt.x} ${pt.y}`)).join(' ');
+    }
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < pts.length - 1; i++){
+      const midX = (pts[i].x + pts[i + 1].x) / 2;
+      const midY = (pts[i].y + pts[i + 1].y) / 2;
+      d += ` Q ${pts[i].x} ${pts[i].y} ${midX} ${midY}`;
+    }
+    const last = pts[pts.length - 1];
+    d += ` L ${last.x} ${last.y}`;
+    return d;
+  }
+
+  function updateHistory(){
+    historyList.innerHTML = breathTimes.map(b =>
+      `<span class="chip ${b.phase.toLowerCase()}">${b.n}. ${b.phase[0]} ${b.time.toFixed(1)}s</span>`
+    ).join('');
+  }
+
+  function render(){
+    let livePts = [];
+    if (isHeld && mode === 'snake'){
+      livePts = snakeTrail;
+    } else if (isHeld){
+      livePts = [points[points.length - 1], livePoint()];
+    }
+    const allPoints = livePts.length ? points.concat(livePts.slice(1)) : points;
+
+    fitViewBoxToPoints(allPoints);
+
+    const color = roundComplete ? 'var(--inhale)' : (!isHeld ? 'var(--hold)' : (isInhale ? 'var(--inhale)' : 'var(--exhale)'));
+    const label = roundComplete ? 'Shape complete' : (!isHeld ? 'Hold' : (isInhale ? 'Inhale' : 'Exhale'));
+
+    drawnPath.setAttribute('d', livePts.length ? pathDataFor(livePts, mode === 'snake') : '');
+    drawnPath.style.stroke = isInhale ? 'var(--inhale)' : 'var(--exhale)';
+    const dotPos = allPoints[allPoints.length - 1];
+    dot.setAttribute('cx', dotPos.x);
+    dot.setAttribute('cy', dotPos.y);
+    dot.style.fill = color;
+
+    phaseLabel.textContent = label;
+    phaseLabel.style.color = color;
+
+    if (roundComplete){
+      timerLabel.textContent = '';
+      instruction.innerHTML = 'Here is the shape your breathing drew' + '<span class="key">check the summary below</span>';
+    } else if (isHeld){
+      const elapsed = pressTs ? (performance.now() - pressTs) / 1000 : 0;
+      timerLabel.textContent = elapsed.toFixed(1) + 's';
+
+      if (mode === 'optimal'){
+        const overSec = elapsed - (OPTIMAL_DURATION / 1000);
+        if (overSec > 0){
+          pendingBonus = Math.floor(overSec * 5);
+          bonusLabel.textContent = '+' + pendingBonus + ' XP bonus';
+          bonusLabel.classList.add('show');
+        } else {
+          pendingBonus = 0;
+          bonusLabel.classList.remove('show');
+        }
+      } else {
+        bonusLabel.classList.remove('show');
+      }
+
+      const keyHint = (mode === 'snake')
+        ? 'steer with your cursor (or ← / → / A / D)'
+        : 'the line stops the instant you let go';
+      instruction.innerHTML = 'Keep holding — release to end this breath' + `<span class="key">${keyHint}</span>`;
+    } else {
+      timerLabel.textContent = '0.0s';
+      bonusLabel.classList.remove('show');
+      const nextPhase = (segCount % 2 === 0) ? 'Inhale' : 'Exhale';
+      const nextColor = nextPhase === 'Inhale' ? 'var(--inhale)' : 'var(--exhale)';
+      instruction.innerHTML = `Press and hold to <strong style="color:${nextColor}">${nextPhase.toLowerCase()}</strong>`
+        + '<span class="key">release to end that breath</span>';
+    }
+    cyclesLabel.textContent = 'Cycles: ' + cycles;
+  }
+
+  function tick(){
+    if (!roundComplete && isHeld){
+      const dt = tick.lastDt || 16;
+      if (mode === 'snake'){
+        const head = snakeTrail.length ? snakeTrail[snakeTrail.length - 1] : points[points.length - 1];
+
+        if (cursorClientX !== null){
+          const cursorPt = screenToSvg(cursorClientX, cursorClientY);
+          const dx = cursorPt.x - head.x, dy = cursorPt.y - head.y;
+          if (Math.hypot(dx, dy) > 0.5){
+            const desired = Math.atan2(dy, dx) * 180 / Math.PI;
+            const diff = angleDiff(headingDeg, desired);
+            const maxTurn = SNAKE_TURN_SPEED * dt;
+            headingDeg += Math.max(-maxTurn, Math.min(maxTurn, diff));
+          }
+        }
+        if (leftPressed) headingDeg -= SNAKE_TURN_SPEED * dt;
+        if (rightPressed) headingDeg += SNAKE_TURN_SPEED * dt;
+
+        const step = dt * FREE_SPEED;
+        const rad = headingDeg * Math.PI / 180;
+        snakeTrail.push({ x: head.x + Math.cos(rad) * step, y: head.y + Math.sin(rad) * step });
+      } else {
+        currentLength = Math.min(currentLength + dt * growthRateForMode(), maxLenForMode());
+      }
+    }
+    render();
+    requestAnimationFrame((ts) => {
+      if (tick.lastTs !== undefined) tick.lastDt = ts - tick.lastTs;
+      tick.lastTs = ts;
+      tick();
+    });
+  }
+
+  function press(){
+    if (roundComplete || isHeld || modalOpen) return;
+    isHeld = true;
+    isInhale = (segCount % 2 === 0);
+    currentLength = 0;
+    pressTs = performance.now();
+    playBreathChime(isInhale);
+    if (mode === 'snake'){
+      const start = points[points.length - 1];
+      snakeTrail = [{ x: start.x, y: start.y }];
+    } else if (segCount === numBreaths - 1){
+      // Final breath — aim straight at the shape's starting point so it closes exactly.
+      const last = points[points.length - 1];
+      headingDeg = Math.atan2(points[0].y - last.y, points[0].x - last.x) * 180 / Math.PI;
+    }
+  }
+
+  function release(){
+    if (roundComplete || !isHeld) return;
+    isHeld = false;
+    const elapsedSec = pressTs ? (performance.now() - pressTs) / 1000 : 0;
+    pressTs = null;
+
+    if (mode === 'optimal' && elapsedSec < OPTIMAL_DURATION / 1000){
+      currentLength = 0;
+      points = [startPoint()];
+      headingDeg = startHeading(numBreaths);
+      segCount = 0;
+      segmentRanges = [];
+      renderCommittedSegments();
+      breathTimes = [];
+      updateHistory();
+      pendingBonus = 0;
+      bonusLabel.classList.remove('show');
+      showFail();
+      return;
+    }
+
+    const startIdx = points.length - 1;
+
+    if (mode === 'snake'){
+      for (let i = 1; i < snakeTrail.length; i++) points.push(snakeTrail[i]);
+      if (snakeTrail.length <= 1) points.push(points[points.length - 1]);
+      snakeTrail = [];
+    } else {
+      let end = livePoint();
+      if (segCount === numBreaths - 1){
+        // Snap exactly onto the start point, regardless of how far the hold got —
+        // guarantees a clean, gap-free closure every time.
+        end = { x: points[0].x, y: points[0].y };
+      }
+      points.push(end);
+      if (mode !== 'snake') headingDeg += 360 / numBreaths;
+    }
+    currentLength = 0;
+
+    segCount += 1;
+    breathTimes.push({ n: segCount, phase: isInhale ? 'Inhale' : 'Exhale', time: elapsedSec });
+    updateHistory();
+    segmentRanges.push({ startIdx, endIdx: points.length - 1, phase: isInhale ? 'Inhale' : 'Exhale' });
+
+    if (pendingBonus > 0){
+      totalXP += pendingBonus;
+      xpLabel.textContent = 'XP: ' + totalXP;
+    }
+    pendingBonus = 0;
+    bonusLabel.classList.remove('show');
+
+    if (segCount >= numBreaths){
+      // The final breath (handled above) already snapped its endpoint onto
+      // points[0], so the shape is closed — no extra stitching line needed here.
+      cycles += 1;
+      roundComplete = true;
+      showSummary(points.slice(), breathTimes.slice(), segmentRanges.slice(), mode === 'snake');
+    }
+    renderCommittedSegments();
+  }
+
+  function showSummary(finalPoints, finalBreathTimes, finalSegmentRanges, curved){
+    fitModalSvg(finalPoints);
+    modalSegments.innerHTML = '';
+    for (const seg of finalSegmentRanges){
+      const pts = finalPoints.slice(seg.startIdx, seg.endIdx + 1);
+      if (pts.length < 2) continue;
+      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      p.setAttribute('class', 'path');
+      p.setAttribute('d', pathDataFor(pts, curved));
+      p.style.stroke = seg.phase === 'Inhale' ? 'var(--inhale)' : 'var(--exhale)';
+      modalSegments.appendChild(p);
+    }
+
+    let total = 0;
+    modalTimes.innerHTML = finalBreathTimes.map(b => {
+      total += b.time;
+      return `<div class="modalTimeRow ${b.phase.toLowerCase()}">
+        <span class="lbl">Breath ${b.n} · ${b.phase}</span>
+        <span class="val">${b.time.toFixed(1)}s</span>
+      </div>`;
+    }).join('');
+    modalTotal.textContent = 'Total: ' + total.toFixed(1) + 's · ' + finalBreathTimes.length + ' breaths';
+
+    modalOpen = true;
+    modalOverlay.classList.add('open');
+  }
+
+  function fitModalSvg(pts){
+    const modalSvg = document.getElementById('modalSvg');
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const p of pts){
+      minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+      minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+    }
+    const pad = 18;
+    const w = maxX - minX, h = maxY - minY;
+    const size = Math.max(w, h, 40) + pad * 2;
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    modalSvg.setAttribute('viewBox', `${cx - size/2} ${cy - size/2} ${size} ${size}`);
+  }
+
+  function closeSummary(){
+    modalOpen = false;
+    modalOverlay.classList.remove('open');
+    segCount = 0;
+    points = [startPoint()];
+    headingDeg = startHeading(numBreaths);
+    roundComplete = false;
+    snakeTrail = [];
+    segmentRanges = [];
+    renderCommittedSegments();
+    breathTimes = [];
+    updateHistory();
+  }
+  modalClose.addEventListener('click', closeSummary);
+
+  function showFail(){
+    modalOpen = true;
+    failOverlay.classList.add('open');
+  }
+  function closeFail(){
+    modalOpen = false;
+    failOverlay.classList.remove('open');
+  }
+  failClose.addEventListener('click', closeFail);
+
+  stage.addEventListener('mousedown', press);
+  window.addEventListener('mouseup', release);
+  stage.addEventListener('touchstart', (e) => { e.preventDefault(); press(); }, { passive:false });
+  window.addEventListener('touchend', release);
+  window.addEventListener('touchcancel', release);
+
+  window.addEventListener('mousemove', (e) => {
+    cursorClientX = e.clientX;
+    cursorClientY = e.clientY;
+  });
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches[0]){
+      cursorClientX = e.touches[0].clientX;
+      cursorClientY = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar'){
+      e.preventDefault();
+      press();
+    }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA'){
+      if (mode === 'snake') e.preventDefault();
+      leftPressed = true;
+    }
+    if (e.code === 'ArrowRight' || e.code === 'KeyD'){
+      if (mode === 'snake') e.preventDefault();
+      rightPressed = true;
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar'){
+      e.preventDefault();
+      release();
+    }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') leftPressed = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') rightPressed = false;
+  });
+
+  document.getElementById('segDown').addEventListener('click', () => {
+    if (mode === 'optimal') return;
+    numBreaths = Math.max(3, numBreaths - 1);
+    rebuildGeometry();
+    resetAll();
+  });
+  document.getElementById('segUp').addEventListener('click', () => {
+    if (mode === 'optimal') return;
+    numBreaths = Math.min(12, numBreaths + 1);
+    rebuildGeometry();
+    resetAll();
+  });
+
+  function resetAll(){
+    points = [startPoint()]; headingDeg = startHeading(numBreaths); segCount = 0; currentLength = 0;
+    isInhale = true; isHeld = false; roundComplete = false; pressTs = null;
+    snakeTrail = [];
+    segmentRanges = [];
+    renderCommittedSegments();
+    cycles = 0;
+    totalXP = 0;
+    pendingBonus = 0;
+    xpLabel.textContent = 'XP: ' + totalXP;
+    bonusLabel.classList.remove('show');
+    breathTimes = [];
+    updateHistory();
+    modalOpen = false;
+    modalOverlay.classList.remove('open');
+    failOverlay.classList.remove('open');
+    guidePoly.style.display = (mode === 'optimal') ? '' : 'none';
+    fitViewBoxToPoints(points);
+    render();
+  }
+  document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+  modeOptimalBtn.addEventListener('click', () => {
+    mode = 'optimal';
+    numBreaths = 4;
+    duration = OPTIMAL_DURATION;
+    rebuildGeometry();
+    modeOptimalBtn.classList.add('active');
+    modeFreeBtn.classList.remove('active');
+    modeSnakeBtn.classList.remove('active');
+    optimalRow.style.display = 'flex';
+    optimalInfo.style.display = 'flex';
+    segmentRow.style.display = 'none';
+    resetAll();
+  });
+  modeFreeBtn.addEventListener('click', () => {
+    mode = 'free';
+    if (numBreaths < 3) numBreaths = 6;
+    rebuildGeometry();
+    modeFreeBtn.classList.add('active');
+    modeOptimalBtn.classList.remove('active');
+    modeSnakeBtn.classList.remove('active');
+    optimalRow.style.display = 'none';
+    optimalInfo.style.display = 'none';
+    segmentRow.style.display = 'flex';
+    resetAll();
+  });
+  modeSnakeBtn.addEventListener('click', () => {
+    mode = 'snake';
+    if (numBreaths < 3) numBreaths = 8;
+    rebuildGeometry();
+    modeSnakeBtn.classList.add('active');
+    modeOptimalBtn.classList.remove('active');
+    modeFreeBtn.classList.remove('active');
+    optimalRow.style.display = 'none';
+    optimalInfo.style.display = 'none';
+    segmentRow.style.display = 'flex';
+    resetAll();
+  });
+
+  rebuildGeometry();
+  updateSoundToggle();
+  optimalInfo.style.display = 'flex';
+  resetAll();
+  requestAnimationFrame((ts) => { tick.lastTs = ts; tick(); });
+
+  const tutorialIcons = [
+    `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="12" y="6" width="24" height="34" rx="12" stroke="currentColor" stroke-width="2.2"/>
+      <line x1="24" y1="6" x2="24" y2="18" stroke="currentColor" stroke-width="2.2"/>
+      <circle cx="24" cy="12" r="5" fill="currentColor"/>
+      <circle cx="24" cy="12" r="10" stroke="currentColor" stroke-width="1.5" opacity="0.4"/>
+    </svg>`,
+    `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="12" y="6" width="24" height="34" rx="12" stroke="currentColor" stroke-width="2.2"/>
+      <line x1="24" y1="6" x2="24" y2="18" stroke="currentColor" stroke-width="2.2"/>
+      <path d="M24 26 L24 34 M20 30 L24 34 L28 30" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`,
+    `<svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="9" y="9" width="30" height="30" rx="4" stroke="currentColor" stroke-width="2.2"/>
+      <path d="M16 25 L22 31 L33 18" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>`
+  ];
+  const tutorialSlides = [
+    {
+      title: 'Press & hold to breathe',
+      text: 'Click and hold anywhere on the shape — or just hold the spacebar. The line grows for as long as you keep holding.'
+    },
+    {
+      title: 'Release to switch',
+      text: 'Let go to end that breath. Each press alternates automatically — inhale, then exhale, then inhale again.'
+    },
+    {
+      title: 'Work your way around',
+      text: 'Keep pressing and releasing to trace every side. Optimal mode paces you to 4s a breath (with bonus XP for going longer); Free mode lets you set your own pace and shape. Finish all sides for a full summary.'
+    }
+  ];
+  let tutorialIndex = 0;
+  const tutorialOverlay = document.getElementById('tutorialOverlay');
+  const tutorialIcon = document.getElementById('tutorialIcon');
+  const tutorialTitle = document.getElementById('tutorialTitle');
+  const tutorialText = document.getElementById('tutorialText');
+  const tutorialDots = document.getElementById('tutorialDots');
+  const tutorialNext = document.getElementById('tutorialNext');
+  const tutorialSkip = document.getElementById('tutorialSkip');
+  const helpBtn = document.getElementById('helpBtn');
+
+  function renderTutorialSlide(){
+    const slide = tutorialSlides[tutorialIndex];
+    tutorialIcon.innerHTML = tutorialIcons[tutorialIndex];
+    tutorialTitle.textContent = slide.title;
+    tutorialText.textContent = slide.text;
+    tutorialDots.innerHTML = tutorialSlides.map((_, i) =>
+      `<span class="tutorialDot${i === tutorialIndex ? ' active' : ''}"></span>`
+    ).join('');
+    tutorialNext.textContent = (tutorialIndex === tutorialSlides.length - 1) ? 'Get started' : 'Next';
+  }
+
+  function openTutorial(){
+    tutorialIndex = 0;
+    renderTutorialSlide();
+    tutorialOverlay.classList.add('open');
+  }
+  function closeTutorial(){
+    tutorialOverlay.classList.remove('open');
+    try { localStorage.setItem('ubreathe_tutorial_seen', '1'); } catch (e) {}
+  }
+  tutorialNext.addEventListener('click', () => {
+    if (tutorialIndex < tutorialSlides.length - 1){
+      tutorialIndex += 1;
+      renderTutorialSlide();
+    } else {
+      closeTutorial();
+    }
+  });
+  tutorialSkip.addEventListener('click', closeTutorial);
+  helpBtn.addEventListener('click', openTutorial);
+
+  let hasSeenTutorial = false;
+  try { hasSeenTutorial = !!localStorage.getItem('ubreathe_tutorial_seen'); } catch (e) {}
+  if (!hasSeenTutorial) openTutorial();
+})();
+</script>
+</body>
+</html>
